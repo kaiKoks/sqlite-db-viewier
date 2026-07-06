@@ -1,0 +1,24 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+frontend/node_modules
+
+
+# next.js
+frontend/.next/
+frontend/out/
+
+# production
+fronted/build
+
+
+
+# env files (can opt-in for committing if needed)
+fronted.env*
+
+
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+\
