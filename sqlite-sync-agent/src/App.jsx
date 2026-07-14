@@ -29,9 +29,15 @@ export default function App() {
       setLastSync(timeStr);
     });
 
+    // Подписка на остановку службы из системного трея
+    const stopCleanup = window.api.onExternalStop(() => {
+      setIsActive(false);
+    });
+
     return () => {
       logCleanup();
       successCleanup();
+      stopCleanup();
     };
   }, []);
 
