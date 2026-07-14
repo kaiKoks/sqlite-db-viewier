@@ -1,0 +1,51 @@
+{
+  "name": "sqlite-sync-agent",
+  "version": "1.1.0",
+  "description": "Tray-capable SQLite Sync Agent written with Electron, React, and Tailwind CSS",
+  "main": "main.js",
+  "scripts": {
+    "build": "vite build",
+    "start": "vite build && electron .",
+    "dist": "vite build && electron-builder --win"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react": "^4.0.3",
+    "autoprefixer": "^10.4.14",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.4.27",
+    "tailwindcss": "^3.3.3",
+    "vite": "^4.4.5"
+  },
+  "build": {
+    "appId": "com.sqlite.sync.agent",
+    "productName": "SQLite Sync Agent",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "main.js",
+      "preload.js",
+      "icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SQLite Sync Agent"
+    }
+  }
+}
