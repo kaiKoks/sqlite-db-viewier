@@ -115,9 +115,9 @@ export function DataTable({
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0 gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <h2 className={`text-sm font-semibold text-foreground truncate ${!isOpen ? 'pl-7' : ''}`}>{tableName}</h2>
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0 gap-4  overflow-y-auto">
+        <div className="flex items-center gap-3 min-w-0 shrink-0">
+          <h2 className={`text-sm font-semibold text-foreground shrink-0 truncate ${!isOpen ? 'pl-7' : ''}`}>{tableName}</h2>
           {!loading && !error && (
             <Badge variant="secondary" className="font-mono text-xs shrink-0">
               {total.toLocaleString()} rows
@@ -149,7 +149,7 @@ export function DataTable({
 
             {/* Page navigation */}
             {totalPages > 1 && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {start}–{end} of {total.toLocaleString()}
                 </span>

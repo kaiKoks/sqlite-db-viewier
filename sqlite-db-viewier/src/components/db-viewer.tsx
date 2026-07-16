@@ -5,7 +5,6 @@ import { TableSidebar } from "@/components/table-sidebar"
 import { DataTable, SortState } from "@/components/data-table"
 import { SourcePicker, SourceInfo } from "@/components/source-picker"
 import { NoDatabase, NoTableSelected } from "@/components/empty-state"
-// Импортируем аккуратные иконки и утилиту слияния классов Tailwind
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -234,7 +233,7 @@ export function DbViewer() {
           )}
         >
           {/* Header сайдбара с идеальным выравниванием */}
-          <div className="flex items-center justify-between pr-2 border-b border-border h-[53px]">
+          <div className="flex items-center justify-between pr-2 border-b border-border h-13.25">
             <div className="flex-1 min-w-0">
               <SourcePicker
                 sources={sources}
