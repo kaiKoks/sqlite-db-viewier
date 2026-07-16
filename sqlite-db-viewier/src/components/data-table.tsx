@@ -56,6 +56,7 @@ interface DataTableProps {
   loading: boolean
   error: string | null
   sort: SortState
+  isOpen: boolean
   onPageChange: (page: number) => void
   onPageSizeChange: (size: number) => void
   onSortChange: (sort: SortState) => void
