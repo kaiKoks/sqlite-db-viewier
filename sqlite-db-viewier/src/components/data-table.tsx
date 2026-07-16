@@ -132,7 +132,7 @@ export function DataTable({
                 value={String(pageSize)}
                 onValueChange={(v) => onPageSizeChange(Number(v))}
               >
-                <SelectTrigger className="h-7 w-[70px] text-xs">
+                <SelectTrigger className="h-7 w-17.5 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -307,20 +307,20 @@ export function DataTable({
                           ) : display.length > 60 ? (
                             <Tooltip>
                               <TooltipTrigger
-                                className="font-mono truncate block max-w-[280px] cursor-default text-left"
+                                className="font-mono truncate block max-w-70 cursor-default text-left"
                                 render={<span />}
                               >
                                 {display}
                               </TooltipTrigger>
                               <TooltipContent
                                 side="bottom"
-                                className="max-w-[400px] break-all text-xs font-mono"
+                                className="max-w-100 break-all text-xs font-mono"
                               >
                                 {display}
                               </TooltipContent>
                             </Tooltip>
                           ) : (
-                            <span className="font-mono truncate block max-w-[280px]">{display}</span>
+                            <span className="font-mono truncate block max-w-70">{display}</span>
                           )}
                         </TableCell>
                       )
