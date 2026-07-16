@@ -55,7 +55,7 @@ export function SourcePicker({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const current = sources.find((s) => s.name === selectedSource) ?? null
+  const current = (sources.length > 0 && sources.find((s) => s.name === selectedSource)) ?? null
 
   if (loading) {
     return (

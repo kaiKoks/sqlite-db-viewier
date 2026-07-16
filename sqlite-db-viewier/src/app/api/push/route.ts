@@ -3,15 +3,17 @@ import fs from 'fs'
 import {
   sanitizeSourceName,
   ensureSyncedDir,
-  readMeta,
-  writeMeta,
+  readMetaAsync,
+  writeMetaAsync,
   getSyncedDbWritePath,
+  saveDbToBlobs,
 } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
-// Max allowed upload size: 512 MB
 const MAX_SIZE = 512 * 1024 * 1024
+
+const IS_NETLIFY = process.env.NETLIFY === 'true' || process.env.NEXT_PUBLIC_NETLIFY === 'true'
 
 export async function POST(request: NextRequest) {
   const rawSource = request.nextUrl.searchParams.get('source')
@@ -33,26 +35,30 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const buffer = Buffer.from(await request.arrayBuffer())
+    const arrayBuffer = await request.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
 
     if (buffer.byteLength === 0) {
       return NextResponse.json({ error: 'Empty body received.' }, { status: 400 })
     }
 
-    // Quick SQLite magic-byte check: first 16 bytes should be "SQLite format 3\000"
     const magic = buffer.slice(0, 16).toString('ascii')
     if (!magic.startsWith('SQLite format 3')) {
       return NextResponse.json({ error: 'File does not appear to be a valid SQLite database.' }, { status: 422 })
     }
 
-    ensureSyncedDir()
-    const destPath = getSyncedDbWritePath(source)
-    fs.writeFileSync(destPath, buffer)
+    if (IS_NETLIFY) {
+      await saveDbToBlobs(source, buffer)
+    } else {
+      ensureSyncedDir()
+      const destPath = getSyncedDbWritePath(source)
+      fs.writeFileSync(destPath, buffer)
+    }
 
-    // Update meta
-    const meta = readMeta()
+    // Обновляем метаданные через асинхронные обертки
+    const meta = await readMetaAsync()
     meta[source] = { lastSync: new Date().toISOString(), size: buffer.byteLength }
-    writeMeta(meta)
+    await writeMetaAsync(meta)
 
     return NextResponse.json({
       ok: true,
@@ -62,6 +68,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('Upload error:', err)
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

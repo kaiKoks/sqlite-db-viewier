@@ -1,5 +1,6 @@
 import path from 'path'
 import fs from 'fs'
+import { getStore } from '@netlify/blobs'
 
 // Use the pure asm.js build (no WASM, no native binaries required)
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -18,7 +19,7 @@ type SqlStatement = {
 }
 
 type SqlJs = {
-  Database: new (data: Buffer) => SqlDatabase
+  Database: new (data: Buffer | Uint8Array) => SqlDatabase
 }
 
 let _sqlJs: SqlJs | null = null
@@ -26,12 +27,14 @@ let _sqlJs: SqlJs | null = null
 // Per-source DB cache: cacheKey -> { db, mtime }
 const _dbCache = new Map<string, { db: SqlDatabase; mtime: number }>()
 
-const SYNCED_DIR = 'synced-dbs'
+const IS_NETLIFY = process.env.NETLIFY === 'true' || process.env.NEXT_PUBLIC_NETLIFY === 'true'
+
+const TEMP_DIR = IS_NETLIFY ? '/tmp/synced-dbs' : 'synced-dbs'
 
 // ─── Path helpers ───────────────────────────────────────────────────────────
 
 function getSyncedDir(): string {
-  return path.join(process.cwd(), SYNCED_DIR)
+  return path.join(process.cwd(), TEMP_DIR)
 }
 
 function getSyncedDbPath(source: string): string {
@@ -48,6 +51,95 @@ function resolveDbPath(source: string | null): string {
   return source ? getSyncedDbPath(source) : getLocalDbPath()
 }
 
+// ─── Netlify Blobs helpers ─────────────────────────────────────────────────
+
+async function getBlobStore() {
+  return getStore('databases')
+}
+
+export async function saveDbToBlobs(source: string, buffer: Buffer): Promise<void> {
+  const store = await getBlobStore()
+  const arrayBuffer = new Uint8Array(buffer).buffer
+  await store.set(`${source}.db`, arrayBuffer)
+}
+
+export async function loadDbFromBlobs(source: string): Promise<Buffer | null> {
+  try {
+    const store = await getBlobStore()
+    const blob = await store.get(`${source}.db`, { type: 'arrayBuffer' })
+    if (!blob) return null
+    return Buffer.from(blob)
+  } catch (error) {
+    console.error(`Error loading ${source}.db from blobs:`, error)
+    return null
+  }
+}
+
+export async function deleteDbFromBlobs(source: string): Promise<void> {
+  try {
+    const store = await getBlobStore()
+    await store.delete(`${source}.db`)
+  } catch (error) {
+    console.error(`Error deleting ${source}.db from blobs:`, error)
+  }
+}
+
+async function listDbsFromBlobs(): Promise<string[]> {
+  try {
+    const store = await getBlobStore()
+    const list = await store.list()
+    return list.blobs
+      .map(blob => blob.key)
+      .filter(key => key.endsWith('.db'))
+      .map(key => key.replace(/\.db$/, ''))
+  } catch (error) {
+    console.error('Error listing databases from blobs:', error)
+    return []
+  }
+}
+
+// ─── Async Meta management (Fix for Serverless) ──────────────────────────
+
+function getMetaPath(): string {
+  return path.join(getSyncedDir(), 'meta.json')
+}
+
+export async function readMetaAsync(): Promise<Record<string, Omit<SourceMeta, 'name'>>> {
+  if (IS_NETLIFY) {
+    try {
+      const store = await getBlobStore()
+      const data = await store.get('meta.json', { type: 'json' })
+      return (data as Record<string, Omit<SourceMeta, 'name'>>) || {}
+    } catch (error) {
+      console.error('Error reading meta from blobs:', error)
+      return {}
+    }
+  }
+  
+  const p = getMetaPath()
+  if (!fs.existsSync(p)) return {}
+  try { return JSON.parse(fs.readFileSync(p, 'utf-8')) } catch { return {} }
+}
+
+export async function writeMetaAsync(meta: Record<string, Omit<SourceMeta, 'name'>>): Promise<void> {
+  if (IS_NETLIFY) {
+    try {
+      const store = await getBlobStore()
+      await store.set('meta.json', JSON.stringify(meta))
+    } catch (error) {
+      console.error('Error writing meta to blobs:', error)
+    }
+    return
+  }
+
+  const p = getMetaPath()
+  const dir = path.dirname(p)
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true })
+  }
+  fs.writeFileSync(p, JSON.stringify(meta, null, 2))
+}
+
 // ─── sql.js init ────────────────────────────────────────────────────────────
 
 async function getSqlJs(): Promise<SqlJs> {
@@ -59,16 +151,28 @@ async function getSqlJs(): Promise<SqlJs> {
 // ─── DB access ──────────────────────────────────────────────────────────────
 
 export async function getDbForSource(source: string | null): Promise<SqlDatabase> {
+  if (IS_NETLIFY && source) {
+    const buffer = await loadDbFromBlobs(source)
+    if (!buffer) {
+      throw new Error(`Database ${source} not found in blob storage`)
+    }
+    const SQL = await getSqlJs()
+    return new SQL.Database(buffer)
+  }
+
   const dbPath = resolveDbPath(source)
   const cacheKey = source ?? '__local__'
 
-  const stat = fs.statSync(dbPath) // throws if missing — caller handles
+  if (!fs.existsSync(dbPath)) {
+    throw new Error(`Database file not found: ${dbPath}`)
+  }
+
+  const stat = fs.statSync(dbPath)
   const mtime = stat.mtimeMs
 
   const cached = _dbCache.get(cacheKey)
   if (cached && cached.mtime === mtime) return cached.db
 
-  // File changed or first load — (re)open
   if (cached) {
     try { cached.db.close() } catch { /* ignore */ }
     _dbCache.delete(cacheKey)
@@ -81,7 +185,11 @@ export async function getDbForSource(source: string | null): Promise<SqlDatabase
   return db
 }
 
-export function dbExistsForSource(source: string | null): boolean {
+export async function dbExistsForSource(source: string | null): Promise<boolean> {
+  if (IS_NETLIFY && source) {
+    const buffer = await loadDbFromBlobs(source)
+    return buffer !== null
+  }
   return fs.existsSync(resolveDbPath(source))
 }
 
@@ -93,7 +201,6 @@ export type SourceMeta = {
   size: number
 }
 
-/** Sanitise a source name so it is safe to use as a filename component. */
 export function sanitizeSourceName(raw: string): string | null {
   const clean = raw.trim().replace(/[^a-zA-Z0-9_\-.]/g, '_').replace(/^\.+/, '')
   if (!clean || clean.length > 64 || clean.includes('..')) return null
@@ -102,31 +209,34 @@ export function sanitizeSourceName(raw: string): string | null {
 
 export function ensureSyncedDir(): void {
   const dir = getSyncedDir()
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true })
+  }
 }
 
-function getMetaPath(): string {
-  return path.join(getSyncedDir(), 'meta.json')
-}
+export async function getSyncedSources(): Promise<SourceMeta[]> {
+  if (IS_NETLIFY) {
+    const names = await listDbsFromBlobs()
+    const meta = await readMetaAsync() // Используем асинхронное чтение метаданных
+    
+    return names
+      .map((name) => {
+        const m = meta[name]
+        return {
+          name,
+          lastSync: m?.lastSync ?? new Date().toISOString(),
+          size: m?.size ?? 0,
+        }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }
 
-export function readMeta(): Record<string, Omit<SourceMeta, 'name'>> {
-  const p = getMetaPath()
-  if (!fs.existsSync(p)) return {}
-  try { return JSON.parse(fs.readFileSync(p, 'utf-8')) } catch { return {} }
-}
-
-export function writeMeta(meta: Record<string, Omit<SourceMeta, 'name'>>): void {
-  fs.writeFileSync(getMetaPath(), JSON.stringify(meta, null, 2))
-}
-
-/** Returns all synced sources sorted alphabetically. */
-export function getSyncedSources(): SourceMeta[] {
   ensureSyncedDir()
-  const meta = readMeta()
+  const meta = await readMetaAsync()
   const dir = getSyncedDir()
   try {
-    return fs
-      .readdirSync(dir)
+    const files = fs.readdirSync(dir)
+    return files
       .filter((f) => f.endsWith('.db'))
       .map((f) => {
         const name = f.replace(/\.db$/, '')
@@ -139,7 +249,8 @@ export function getSyncedSources(): SourceMeta[] {
         }
       })
       .sort((a, b) => a.name.localeCompare(b.name))
-  } catch {
+  } catch (error) {
+    console.error('Error reading synced sources:', error)
     return []
   }
 }
@@ -147,8 +258,6 @@ export function getSyncedSources(): SourceMeta[] {
 export function getSyncedDbWritePath(source: string): string {
   return getSyncedDbPath(source)
 }
-
-// ─── Query helper ───────────────────────────────────────────────────────────
 
 export function sqliteQuery<T = Record<string, unknown>>(
   db: SqlDatabase,
@@ -161,4 +270,15 @@ export function sqliteQuery<T = Record<string, unknown>>(
   while (stmt.step()) rows.push(stmt.getAsObject() as T)
   stmt.free()
   return rows
+}
+
+export function cleanupDbCache(): void {
+  for (const [key, cached] of _dbCache) {
+    try {
+      cached.db.close()
+    } catch {
+      // ignore
+    }
+  }
+  _dbCache.clear()
 }
