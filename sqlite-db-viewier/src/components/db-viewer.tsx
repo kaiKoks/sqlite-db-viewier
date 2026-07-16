@@ -5,6 +5,9 @@ import { TableSidebar } from "@/components/table-sidebar"
 import { DataTable, SortState } from "@/components/data-table"
 import { SourcePicker, SourceInfo } from "@/components/source-picker"
 import { NoDatabase, NoTableSelected } from "@/components/empty-state"
+// Импортируем аккуратные иконки и утилиту слияния классов Tailwind
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 // How often to re-fetch sources + re-fetch the current table (milliseconds)
 const SYNC_POLL_MS = 60_000
@@ -33,6 +36,7 @@ interface RowsResponse {
 
 export function DbViewer() {
   // ── Sources ──────────────────────────────────────────────────────────────
+  const [isOpen, setIsOpen] = useState(true)
   const [sources, setSources] = useState<SourceInfo[]>([])
   const [sourcesLoading, setSourcesLoading] = useState(true)
   const [selectedSource, setSelectedSource] = useState<string | null>(null)
@@ -215,27 +219,64 @@ export function DbViewer() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
-      <aside className="flex flex-col h-full border-r border-border bg-card w-64 shrink-0">
-        <SourcePicker
-          sources={sources}
-          selectedSource={selectedSource}
-          onSelectSource={handleSelectSource}
-          onRefresh={handleRefreshSources}
-          loading={sourcesLoading}
-        />
-        <TableSidebar
-          tables={tables}
-          selectedTable={selectedTable}
-          onSelectTable={handleSelectTable}
-          loading={tablesLoading}
-          error={tablesError}
-          filename={filename}
-        />
+      {/* Sidebar с плавной анимацией ширины */}
+      <aside
+        className={cn(
+          "flex flex-col h-full border-r border-border bg-card shrink-0 transition-all duration-300 ease-in-out relative",
+          isOpen ? "w-64" : "w-0",
+        )}
+      >
+        {/* Внутренний контейнер фиксированной ширины (предотвращает деформацию контента при закрытии) */}
+        <div
+          className={cn(
+            "w-64 flex flex-col h-full transition-opacity duration-200",
+            isOpen ? "opacity-100" : "opacity-0 pointer-events-none",
+          )}
+        >
+          {/* Header сайдбара с идеальным выравниванием */}
+          <div className="flex items-center justify-between pr-2 border-b border-border h-[53px]">
+            <div className="flex-1 min-w-0">
+              <SourcePicker
+                sources={sources}
+                selectedSource={selectedSource}
+                onSelectSource={handleSelectSource}
+                onRefresh={handleRefreshSources}
+                loading={sourcesLoading}
+              />
+            </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shrink-0"
+              title="Collapse sidebar"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+          </div>
+
+          <TableSidebar
+            tables={tables}
+            selectedTable={selectedTable}
+            onSelectTable={handleSelectTable}
+            loading={tablesLoading}
+            error={tablesError}
+            filename={filename}
+          />
+        </div>
+
+        {/* Кнопка открытия: аккуратно парит в левом углу основного контента, когда сайдбар закрыт */}
+        {!isOpen && (
+          <button
+            onClick={() => setIsOpen(true)}
+            className="absolute top-3 left-3 z-50 flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground shadow-sm hover:bg-accent hover:text-foreground transition-all"
+            title="Expand sidebar"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+        )}
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-hidden flex flex-col">
+      <main className="flex-1 overflow-hidden flex flex-col relative">
         {showNoDatabase ?
           <NoDatabase />
         : !selectedTable && !tablesLoading ?
@@ -251,6 +292,7 @@ export function DbViewer() {
             loading={rowsLoading}
             error={rowsError}
             sort={sort}
+            isOpen={isOpen}
             onPageChange={setCurrentPage}
             onPageSizeChange={(s) => {
               setPageSize(s)

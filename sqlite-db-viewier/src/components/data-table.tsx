@@ -84,6 +84,7 @@ export function DataTable({
   loading,
   error,
   sort,
+  isOpen,
   onPageChange,
   onPageSizeChange,
   onSortChange,
@@ -115,7 +116,7 @@ export function DataTable({
       {/* Toolbar */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-card shrink-0 gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <h2 className="text-sm font-semibold text-foreground truncate">{tableName}</h2>
+          <h2 className={`text-sm font-semibold text-foreground truncate ${!isOpen ? 'pl-7' : ''}`}>{tableName}</h2>
           {!loading && !error && (
             <Badge variant="secondary" className="font-mono text-xs shrink-0">
               {total.toLocaleString()} rows

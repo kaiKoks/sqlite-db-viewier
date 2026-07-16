@@ -96,7 +96,7 @@ export function SourcePicker({
   }
 
   return (
-    <div ref={ref} className="relative border-b border-border bg-card">
+    <div ref={ref} className="relative  bg-card">
       {/* Trigger row */}
       <div className="flex items-center gap-1.5 px-3 py-2">
         <button
