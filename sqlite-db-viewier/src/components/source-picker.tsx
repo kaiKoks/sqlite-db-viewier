@@ -2,7 +2,6 @@
 
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Monitor, RefreshCw, HardDrive, ChevronDown, Clock, ServerCrash } from 'lucide-react'
@@ -73,16 +72,12 @@ export function SourcePicker({
         <ServerCrash className="size-3.5 shrink-0" />
         <span className="text-xs">No synced sources yet</span>
         <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-5 ml-auto shrink-0"
-              onClick={onRefresh}
-              aria-label="Refresh sources"
-            >
-              <RefreshCw className="size-3" />
-            </Button>
+          <TooltipTrigger
+            onClick={onRefresh}
+            aria-label="Refresh sources"
+            className="ml-auto shrink-0 inline-flex size-5 items-center justify-center rounded-md hover:bg-accent transition-colors"
+          >
+            <RefreshCw className="size-3" />
           </TooltipTrigger>
           <TooltipContent side="right" className="text-xs">Refresh sources</TooltipContent>
         </Tooltip>
@@ -122,16 +117,12 @@ export function SourcePicker({
         </button>
 
         <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-6 shrink-0"
-              onClick={onRefresh}
-              aria-label="Refresh sources"
-            >
-              <RefreshCw className="size-3" />
-            </Button>
+          <TooltipTrigger
+            onClick={onRefresh}
+            aria-label="Refresh sources"
+            className="shrink-0 inline-flex size-6 items-center justify-center rounded-md hover:bg-accent transition-colors"
+          >
+            <RefreshCw className="size-3" />
           </TooltipTrigger>
           <TooltipContent side="right" className="text-xs">Refresh sources list</TooltipContent>
         </Tooltip>

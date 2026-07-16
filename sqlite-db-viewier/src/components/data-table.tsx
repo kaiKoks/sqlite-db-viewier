@@ -263,19 +263,10 @@ export function DataTable({
                         <button
                           onClick={() => handleColumnSort(col.name)}
                           className="flex items-center gap-1.5 w-full h-full px-3 py-2.5 hover:bg-accent/60 transition-colors group"
-                          aria-label={`Sort by ${col.name}`}
+                          aria-label={`Sort by ${col.name}${col.primaryKey ? ' (primary key)' : ''}`}
                         >
                           {col.primaryKey && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="inline-flex" aria-label="Primary key">
-                                  <Key className="size-3 text-amber-500 shrink-0" />
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-xs">
-                                Primary key
-                              </TooltipContent>
-                            </Tooltip>
+                            <Key className="size-3 text-amber-500 shrink-0" aria-hidden />
                           )}
                           <span className={isActive ? 'text-foreground' : ''}>{col.name}</span>
                           <span className="font-mono font-normal text-[10px] text-muted-foreground uppercase">
@@ -315,10 +306,11 @@ export function DataTable({
                             <span className="text-muted-foreground/50 italic font-mono">NULL</span>
                           ) : display.length > 60 ? (
                             <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="font-mono truncate block max-w-[280px] cursor-default">
-                                  {display}
-                                </span>
+                              <TooltipTrigger
+                                className="font-mono truncate block max-w-[280px] cursor-default text-left"
+                                render={<span />}
+                              >
+                                {display}
                               </TooltipTrigger>
                               <TooltipContent
                                 side="bottom"
