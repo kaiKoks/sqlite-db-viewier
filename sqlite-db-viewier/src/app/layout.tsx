@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-background">
       <body className="antialiased">
-        <TooltipProvider delayDuration={300}>
+        <TooltipProvider delay={300}>
           {children}
         </TooltipProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
