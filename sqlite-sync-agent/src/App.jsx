@@ -173,8 +173,9 @@ export default function App() {
         </div>
 
         {/* Правая колонка: Статус и Консоль */}
-        <div className="flex flex-col h-full">
-          <div className="bg-[#252538] border border-slate-700 rounded-lg p-4 mb-4 flex justify-between items-center">
+        <div className="space-y-4">
+          {/* Статус службы */}
+          <div className="bg-[#252538] border border-slate-700 rounded-lg p-4 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <span className={`w-3.5 h-3.5 rounded-full ${isActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
               <div>
@@ -188,14 +189,17 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col bg-[#11111b] border border-slate-700 rounded-lg overflow-hidden h-[240px]">
-            <div className="bg-slate-900 px-3 py-2 flex justify-between items-center border-b border-slate-800">
+          <div className="bg-[#11111b] border border-slate-700 rounded-lg overflow-hidden">
+            <div className="bg-slate-900 px-3 py-2 flex justify-between items-center border-b border-slate-800 h-9">
               <span className="text-xs text-slate-400 font-mono">Консоль логов</span>
               <button onClick={clearLogs} className="text-xs text-rose-400 hover:underline">Очистить</button>
             </div>
-            <div className="flex-1 overflow-y-auto p-3 font-mono text-xs space-y-1 text-slate-300">
+            
+            <div className="h-[240px] overflow-y-auto p-3 font-mono text-[11px] space-y-1 text-slate-300">
               {logs.map((log, index) => (
-                <div key={index}>{log}</div>
+                <div key={index} className="break-all whitespace-pre-wrap leading-relaxed">
+                  {log}
+                </div>
               ))}
               <div ref={terminalEndRef} />
             </div>
