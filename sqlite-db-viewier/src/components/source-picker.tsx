@@ -27,15 +27,6 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function formatAgo(iso: string): string {
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (diff < 5) return 'just now'
-  if (diff < 60) return `${diff}s ago`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  return `${Math.floor(diff / 86400)}d ago`
-}
-
 export function SourcePicker({
   sources,
   selectedSource,
@@ -44,9 +35,17 @@ export function SourcePicker({
   loading,
 }: SourcePickerProps) {
   const [open, setOpen] = useState(false)
+  const [now, setNow] = useState<number | null>(null) // Защита от ошибок гидрации SSR
   const ref = useRef<HTMLDivElement>(null)
 
-  // Close dropdown on outside click
+  // Устанавливаем время только на клиенте после монтирования
+  useEffect(() => {
+    setNow(Date.now())
+    const interval = setInterval(() => setNow(Date.now()), 10000) // Обновляем каждые 10 сек
+    return () => clearInterval(interval)
+  }, [])
+
+  // Закрытие дропдауна при клике вовне
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
@@ -55,7 +54,18 @@ export function SourcePicker({
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const current = (sources.length > 0 && sources.find((s) => s.name === selectedSource)) ?? null
+  // ИСПРАВЛЕНО: Безопасный поиск без утечки boolean `false`
+  const current = sources.find((s) => s.name === selectedSource) ?? null
+
+  const formatAgo = (iso: string): string => {
+    if (!now) return '...' // Пока клиент не примонтирован, показываем заглушку
+    const diff = Math.floor((now - new Date(iso).getTime()) / 1000)
+    if (diff < 5) return 'just now'
+    if (diff < 60) return `${diff}s ago`
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+    return `${Math.floor(diff / 86400)}d ago`
+  }
 
   if (loading) {
     return (
