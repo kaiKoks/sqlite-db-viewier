@@ -1,17 +1,17 @@
-'use client'
+"use client"
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { TableSidebar } from '@/components/table-sidebar'
-import { DataTable, SortState } from '@/components/data-table'
-import { SourcePicker, SourceInfo } from '@/components/source-picker'
-import { NoDatabase, NoTableSelected } from '@/components/empty-state'
+import { useState, useEffect, useCallback, useRef } from "react"
+import { TableSidebar } from "@/components/table-sidebar"
+import { DataTable, SortState } from "@/components/data-table"
+import { SourcePicker, SourceInfo } from "@/components/source-picker"
+import { NoDatabase, NoTableSelected } from "@/components/empty-state"
 
 // How often to re-fetch sources + re-fetch the current table (milliseconds)
 const SYNC_POLL_MS = 60_000
 
 interface TableInfo {
   name: string
-  type: 'table' | 'view'
+  type: "table" | "view"
   rowCount: number
 }
 
@@ -41,7 +41,7 @@ export function DbViewer() {
   const [tables, setTables] = useState<TableInfo[]>([])
   const [tablesLoading, setTablesLoading] = useState(false)
   const [tablesError, setTablesError] = useState<string | null>(null)
-  const [filename, setFilename] = useState('')
+  const [filename, setFilename] = useState("")
   const [dbMissing, setDbMissing] = useState(false)
 
   // ── Rows ─────────────────────────────────────────────────────────────────
@@ -51,13 +51,13 @@ export function DbViewer() {
   const [rowsError, setRowsError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
-  const [sort, setSort] = useState<SortState>({ col: null, dir: 'asc' })
+  const [sort, setSort] = useState<SortState>({ col: null, dir: "asc" })
 
   // ── Fetch sources ─────────────────────────────────────────────────────────
   const fetchSources = useCallback(async (silent = false) => {
     if (!silent) setSourcesLoading(true)
     try {
-      const res = await fetch('/api/sources')
+      const res = await fetch("/api/sources")
       if (!res.ok) return
       const data = await res.json()
       setSources(data.sources ?? [])
@@ -74,34 +74,42 @@ export function DbViewer() {
   }, [])
 
   // ── Fetch tables ──────────────────────────────────────────────────────────
-  const fetchTables = useCallback(async (source: string | null, silent = false) => {
-    if (!silent) { setTablesLoading(true); setTablesError(null); setDbMissing(false) }
-    try {
-      const params = source ? `?source=${encodeURIComponent(source)}` : ''
-      const res = await fetch(`/api/tables${params}`)
-      const data = await res.json()
-      if (!res.ok) {
-        if (res.status === 404) {
-          setDbMissing(true)
-          setTables([])
-        } else {
-          setTablesError(data.error ?? 'Failed to load tables')
-        }
-        return
-      }
-      setTables(data.tables)
-      setFilename(data.filename)
-      setDbMissing(false)
-      // Auto-select first table when switching source
+  const fetchTables = useCallback(
+    async (source: string | null, silent = false) => {
       if (!silent) {
-        setSelectedTable(data.tables[0]?.name ?? null)
+        setTablesLoading(true)
+        setTablesError(null)
+        setDbMissing(false)
       }
-    } catch {
-      if (!silent) setTablesError('Network error — could not reach the server.')
-    } finally {
-      if (!silent) setTablesLoading(false)
-    }
-  }, [])
+      try {
+        const params = source ? `?source=${encodeURIComponent(source)}` : ""
+        const res = await fetch(`/api/tables${params}`)
+        const data = await res.json()
+        if (!res.ok) {
+          if (res.status === 404) {
+            setDbMissing(true)
+            setTables([])
+          } else {
+            setTablesError(data.error ?? "Failed to load tables")
+          }
+          return
+        }
+        setTables(data.tables)
+        setFilename(data.filename)
+        setDbMissing(false)
+        // Auto-select first table when switching source
+        if (!silent) {
+          setSelectedTable(data.tables[0]?.name ?? null)
+        }
+      } catch {
+        if (!silent)
+          setTablesError("Network error — could not reach the server.")
+      } finally {
+        if (!silent) setTablesLoading(false)
+      }
+    },
+    [],
+  )
 
   // ── Fetch rows ────────────────────────────────────────────────────────────
   const fetchRows = useCallback(
@@ -110,29 +118,41 @@ export function DbViewer() {
       page: number,
       size: number,
       sortState: SortState,
-      source: string | null
+      source: string | null,
     ) => {
       setRowsLoading(true)
       setRowsError(null)
       try {
-        const params = new URLSearchParams({ table, page: String(page), pageSize: String(size) })
-        if (sortState.col) { params.set('orderBy', sortState.col); params.set('orderDir', sortState.dir) }
-        if (source) params.set('source', source)
+        const params = new URLSearchParams({
+          table,
+          page: String(page),
+          pageSize: String(size),
+        })
+        if (sortState.col) {
+          params.set("orderBy", sortState.col)
+          params.set("orderDir", sortState.dir)
+        }
+        if (source) params.set("source", source)
         const res = await fetch(`/api/rows?${params.toString()}`)
         const data = await res.json()
-        if (!res.ok) { setRowsError(data.error ?? 'Failed to load rows'); return }
+        if (!res.ok) {
+          setRowsError(data.error ?? "Failed to load rows")
+          return
+        }
         setRowsData(data)
       } catch {
-        setRowsError('Network error — could not reach the server.')
+        setRowsError("Network error — could not reach the server.")
       } finally {
         setRowsLoading(false)
       }
     },
-    []
+    [],
   )
 
   // ── Initial load ──────────────────────────────────────────────────────────
-  useEffect(() => { fetchSources() }, [fetchSources])
+  useEffect(() => {
+    fetchSources()
+  }, [fetchSources])
 
   // ── When selectedSource changes → reload tables (and clear table selection) ──
   useEffect(() => {
@@ -164,7 +184,7 @@ export function DbViewer() {
           currentPage,
           pageSize,
           sort,
-          selectedSourceRef.current
+          selectedSourceRef.current,
         )
       }
     }, SYNC_POLL_MS)
@@ -186,7 +206,7 @@ export function DbViewer() {
   function handleSelectTable(name: string) {
     setSelectedTable(name)
     setCurrentPage(1)
-    setSort({ col: null, dir: 'asc' })
+    setSort({ col: null, dir: "asc" })
     setRowsData(null)
   }
 
@@ -216,13 +236,12 @@ export function DbViewer() {
 
       {/* Main content */}
       <main className="flex-1 overflow-hidden flex flex-col">
-        {showNoDatabase ? (
+        {showNoDatabase ?
           <NoDatabase />
-        ) : !selectedTable && !tablesLoading ? (
+        : !selectedTable && !tablesLoading ?
           <NoTableSelected />
-        ) : (
-          <DataTable
-            tableName={selectedTable ?? ''}
+        : <DataTable
+            tableName={selectedTable ?? ""}
             columns={rowsData?.columns ?? []}
             rows={rowsData?.rows ?? []}
             total={rowsData?.total ?? 0}
@@ -233,10 +252,16 @@ export function DbViewer() {
             error={rowsError}
             sort={sort}
             onPageChange={setCurrentPage}
-            onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1) }}
-            onSortChange={(s) => { setSort(s); setCurrentPage(1) }}
+            onPageSizeChange={(s) => {
+              setPageSize(s)
+              setCurrentPage(1)
+            }}
+            onSortChange={(s) => {
+              setSort(s)
+              setCurrentPage(1)
+            }}
           />
-        )}
+        }
       </main>
     </div>
   )
